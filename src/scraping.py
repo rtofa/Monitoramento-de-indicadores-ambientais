@@ -1,14 +1,12 @@
 import requests
 import csv
 import time
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from database.db_connection import salvar_dados_mysql
+from src.db_connection import salvar_dados_mysql
 from requests.utils import quote
 
 API_KEY = '02adefbf-c576-4cc7-bd0b-c310d359d731'
 BASE_URL = 'https://api.airvisual.com/v2'
+
 
 def obter_paises():
     url = f"{BASE_URL}/countries?key={API_KEY}"
@@ -20,6 +18,7 @@ def obter_paises():
     print("Erro ao buscar países.")
     return []
 
+
 def obter_estados(pais):
     url = f"{BASE_URL}/states?country={quote(pais)}&key={API_KEY}"
     response = requests.get(url)
@@ -30,6 +29,7 @@ def obter_estados(pais):
     print("Erro ao buscar estados.")
     return []
 
+
 def obter_cidades(estado, pais):
     url = f"{BASE_URL}/cities?state={quote(estado)}&country={quote(pais)}&key={API_KEY}"
     response = requests.get(url)
@@ -39,6 +39,7 @@ def obter_cidades(estado, pais):
             return [cidade['city'] for cidade in dados['data']]
     print("Erro ao buscar cidades.")
     return []
+
 
 def escolher_pais():
     paises = obter_paises()
@@ -55,6 +56,7 @@ def escolher_pais():
         print("Escolha inválida.")
         return None
 
+
 def escolher_estado(pais):
     estados = obter_estados(pais)
     if not estados:
@@ -69,6 +71,7 @@ def escolher_estado(pais):
     else:
         print("Escolha inválida.")
         return None
+
 
 def escolher_cidade(estado, pais):
     cidades = obter_cidades(estado, pais)
@@ -94,35 +97,45 @@ def obter_aqi_cidade(cidade, estado, pais):
     pais_codificado = quote(pais)
     estado_codificado = quote(estado)
     cidade_codificada = quote(cidade)
+    
     url = f"{BASE_URL}/city?city={cidade_codificada}&state={estado_codificado}&country={pais_codificado}&key={API_KEY}"
+    response = requests.get(url)
     
-    try:
-        response = requests.get(url)
-        if response.status_code != 200:
-            print(f"Erro na requisição para {cidade}, {estado}, {pais}: {response.status_code}")
-            return None
-        
-        dados = response.json()
-        if dados['status'] == 'success':
-            aqi = dados['data']['current']['pollution']['aqius']
-            return aqi
-        else:
-            # Tratamento de mensagens específicas
-            erro = dados.get('data', {}).get('message', 'Erro desconhecido')
-            print(f"Erro ao obter AQI: {erro}")
-            return None
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Erro de conexão: {e}")
+    if response.status_code != 200:
+        print(f"Erro na requisição para {cidade}, {estado}, {pais}: {response.status_code}")
         return None
 
+    dados = response.json()
+    
+    if dados['status'] == 'success':
+        poluicao = dados['data']['current']['pollution']
+        aqi = poluicao['aqius']  # AQI para poluição por PM2.5
+        # Adicione as recomendações com base no AQI
+        if aqi <= 50:
+            seguranca = "Boa"
+            recomendacao = "Atividades ao ar livre são seguras."
+        elif aqi <= 100:
+            seguranca = "Moderada"
+            recomendacao = "Atividades ao ar livre são aceitáveis, mas sensíveis podem ter problemas."
+        elif aqi <= 150:
+            seguranca = "Não seguro"
+            recomendacao = "Evite atividades ao ar livre."
+        else:
+            seguranca = "Perigoso"
+            recomendacao = "Atividades ao ar livre devem ser evitadas."
 
-def emitir_alerta(aqi, cidade):
+        return {
+            'cidade': cidade,
+            'estado': estado,
+            'pais': pais,
+            'aqi': aqi,
+            'seguranca': seguranca,
+            'recomendacao': recomendacao
+        }
+    else:
+        print(f"Erro ao obter informações: {dados.get('data', {}).get('message', 'Erro desconhecido')}")
+        return None
 
-    """Emitir alerta se o AQI ultrapassar certos limites."""
-
-    if aqi > 100:  # Limite de alerta, pode ser ajustado
-        print(f"ALERTA: Qualidade do ar na cidade {cidade} está crítica! AQI: {aqi}")
 
 
 def salvar_dados_csv(dados, nome_arquivo='dados_poluicao.csv'):
@@ -141,30 +154,24 @@ def monitorar_qualidade_do_ar(cidade, estado, pais):
     """Monitorar continuamente a qualidade do ar em uma cidade específica."""
 
     while True:
-        aqi = obter_aqi_cidade(cidade, estado, pais)
-        if aqi is not None:
-            emitir_alerta(aqi, cidade)
-            dados_aqi = [(cidade, estado, pais, aqi)]
+        informacoes = obter_aqi_cidade(cidade, estado, pais)
+        
+        if informacoes is not None:
+            aqi = informacoes['aqi']
+            seguranca = informacoes['seguranca']
+            recomendacao = informacoes['recomendacao']
+            
+            print(f"Qualidade do ar em {informacoes['cidade']}, {informacoes['estado']}, {informacoes['pais']}:")
+            print(f"AQI: {aqi}")
+            print(f"Segurança: {seguranca}")
+            print(f"Recomendação: {recomendacao}")
+            
+            dados_aqi = [(informacoes['cidade'], informacoes['estado'], informacoes['pais'], aqi)]
             salvar_dados_csv(dados_aqi)
             salvar_dados_mysql(dados_aqi)
 
         # Intervalo entre verificações (por exemplo, 1 hora)
         time.sleep(3600)
 
-if __name__ == "__main__":
-    102    
-    pais = escolher_pais()
-    if not pais:
-        sys.exit("Processo interrompido: país não selecionado.")
-    
-    estado = escolher_estado(pais)
-    if not estado:
-        sys.exit("Processo interrompido: estado não selecionado.")
-    
-    cidade = escolher_cidade(estado, pais)
-    if not cidade:
-        sys.exit("Processo interrompido: cidade não selecionada.")
-    
-    print(f"Você escolheu: {cidade}, {estado}, {pais}")
-    monitorar_qualidade_do_ar(cidade, estado, pais)
+
     
