@@ -170,7 +170,7 @@ def monitorar_qualidade_do_ar(cidade, estado, pais):
             salvar_dados_csv(dados_aqi)
             salvar_dados_mysql(dados_aqi)
 
-        # Intervalo entre verificações (por exemplo, 1 hora)
+    
         time.sleep(3600)
 
 

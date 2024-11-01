@@ -1,7 +1,9 @@
+
 class APIError(Exception):
-    
-    pass 
+
+    pass
+     
 
 class DatabaseError(Exception):
    
-    pass
+    pass    
