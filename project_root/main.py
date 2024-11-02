@@ -1,10 +1,10 @@
 
 from fastapi import Depends, FastAPI, HTTPException
-import requests
 from sqlalchemy.orm import Session
+import requests
+import uvicorn
 from .database import get_db, init_db
-from project_root import schemas
-from project_root import crud
+from . import crud, schemas
 
 app = FastAPI()
 
@@ -45,4 +45,6 @@ def consulta_qualidade_ar(pais: str, estado: str, cidade: str):
     else:
         raise HTTPException(status_code=response.status_code, detail="Erro ao consultar a API da IQAir.")
 
-# Aqui você pode incluir outros endpoints e lógica do seu aplicativo
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

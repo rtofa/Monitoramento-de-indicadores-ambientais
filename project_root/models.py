@@ -1,7 +1,7 @@
-from sqlalchemy import Column, DateTime, Integer, String, Float
-from database import Base
+from sqlalchemy import Column, DateTime, Integer, String
+from .database import Base 
 from datetime import datetime
-from auth import hash_senha, verificar_senha
+
 
 class Pesquisa(Base):
         __tablename__ = 'pesquisas'  # Nome da tabela existente

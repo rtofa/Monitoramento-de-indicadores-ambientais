@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
-import models, schemas
+import models
 from auth import hash_senha, verificar_senha
 from fastapi import HTTPException
 import requests
@@ -41,7 +41,6 @@ def excluir_pesquisa(db: Session, pesquisa_id: int):
         db.commit()
     return pesquisa
 
-# Funções para a tabela Usuario
 
 def criar_usuario(db: Session, username: str, email: str, senha: str):
     senha_hash = hash_senha(senha)  # Cria o hash da senha
