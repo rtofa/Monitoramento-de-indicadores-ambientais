@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
-import models
-from auth import hash_senha, verificar_senha
+from project_root import models 
+from project_root.auth import hash_senha, verificar_senha
 from fastapi import HTTPException
 import requests
 
