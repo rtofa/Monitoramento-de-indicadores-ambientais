@@ -1,46 +1,8 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
-from project_root import models 
-from project_root.auth import hash_senha, verificar_senha
+from project_root import models
+from project_root.src.auth import hash_senha, verificar_senha
 from fastapi import HTTPException
-import requests
-
-def obter_qualidade_ar(pais: str, estado: str, cidade: str):
-    # Define a URL do seu back-end que já faz a consulta na API da IQAir
-    url = f'http://localhost:8000/consulta_qualidade_ar/{pais}/{estado}/{cidade}'
-    
-    
-    response = requests.get(url)
-
-   
-    if response.status_code == 200:
-        return response.json()  
-    else:
-        return None 
-
-def criar_pesquisa(db: Session, termo: str):
-    nova_pesquisa = models.Pesquisa(termo=termo, data_criacao=datetime.utcnow())
-    db.add(nova_pesquisa)
-    db.commit()
-    db.refresh(nova_pesquisa)
-    return nova_pesquisa
-
-def listar_pesquisas(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(models.Pesquisa).offset(skip).limit(limit).all()
-
-def buscar_pesquisa_por_id(db: Session, pesquisa_id: int):
-    pesquisa = db.query(models.Pesquisa).filter(models.Pesquisa.id == pesquisa_id).first()
-    if pesquisa is None:
-        raise HTTPException(status_code=404, detail="Pesquisa não encontrada")
-    return pesquisa
-
-def excluir_pesquisa(db: Session, pesquisa_id: int):
-    pesquisa = buscar_pesquisa_por_id(db, pesquisa_id)
-    if pesquisa:
-        db.delete(pesquisa)
-        db.commit()
-    return pesquisa
-
 
 def criar_usuario(db: Session, username: str, email: str, senha: str):
     senha_hash = hash_senha(senha)  # Cria o hash da senha
@@ -60,8 +22,7 @@ def buscar_usuario_por_id(db: Session, usuario_id: int):
     return usuario
 
 def buscar_usuario_por_username(db: Session, username: str):
-    usuario = db.query(models.Usuario).filter(models.Usuario.username == username).first()
-    return usuario
+    return db.query(models.Usuario).filter(models.Usuario.username == username).first()
 
 def autenticar_usuario(db: Session, username: str, senha: str):
     usuario = buscar_usuario_por_username(db, username)

@@ -3,7 +3,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 import requests
 import uvicorn
-from project_root.database import get_db, init_db
+from project_root.database.database import get_db, init_db
 from project_root import crud, schemas
 
 app = FastAPI()
