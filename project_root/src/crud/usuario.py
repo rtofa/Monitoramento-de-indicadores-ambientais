@@ -5,7 +5,7 @@ from project_root.src.auth import hash_senha, verificar_senha
 from fastapi import HTTPException
 
 def criar_usuario(db: Session, username: str, email: str, senha: str):
-    senha_hash = hash_senha(senha)  # Cria o hash da senha
+    senha_hash = hash_senha(senha) 
     novo_usuario = models.Usuario(username=username, email=email, senha=senha_hash, data_criacao=datetime.utcnow())
     db.add(novo_usuario)
     db.commit()
