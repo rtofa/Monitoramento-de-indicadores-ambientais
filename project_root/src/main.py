@@ -1,30 +1,90 @@
+from shlex import quote
 import sys
 import os
+from typing import List, Optional
+import requests
 from fastapi import FastAPI, HTTPException
 import uvicorn
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from database.database import init_db
-from services.scraping import obter_aqi_cidade
+
 
 app = FastAPI()
 
 init_db()
 
+API_KEY = '02adefbf-c576-4cc7-bd0b-c310d359d731'
+BASE_URL = 'https://api.airvisual.com/v2'
 
-@app.get("/consulta_qualidade_ar/{pais}/{estado}/{cidade}")
-def consulta_qualidade_ar(pais: str, estado: str, cidade: str):
-    try:
+def avaliar_qualidade_ar(aqi: int):
+    
+    if aqi <= 50:
+        seguranca = "Boa"
+        recomendacao = "Atividades ao ar livre são seguras."
+    elif aqi <= 100:
+        seguranca = "Moderada"
+        recomendacao = "Atividades ao ar livre são aceitáveis, mas sensíveis podem ter problemas."
+    elif aqi <= 150:
+        seguranca = "Não seguro"
+        recomendacao = "Evite atividades ao ar livre."
+    else:
+        seguranca = "Perigoso"
+        recomendacao = "Atividades ao ar livre devem ser evitadas."
         
-        resultado = obter_aqi_cidade(cidade, estado, pais)
-        return resultado
-    except HTTPException as e:
+    return {"seguranca": seguranca, "recomendacao": recomendacao}
+
+@app.get("/obter-cidades-estado")
+def obter_cidades_estado(estado: str):
+    url = f"{BASE_URL}/cities?state={estado}&country=Brazil&key={API_KEY}"
+
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        dados = response.json()
+        if dados['status'] == 'success':
+            cidades = [cidade['city'] for cidade in dados['data']]
+            return {"cidades": cidades}
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Erro ao obter cidades: {dados.get('data', {}).get('message', 'Erro desconhecido')}"
+            )
+    else:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail="Erro ao fazer a requisição para a API IQAir"
+        )
         
-        raise e
-    except Exception as e:
-        
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/obter-aqi")
+def obter_aqi(cidade: str, estado: str):
+    """Obter a qualidade do ar (AQI) para uma cidade específica em um estado do Brasil"""
+    url = f"{BASE_URL}/city?city={cidade}&state={estado}&country=Brazil&key={API_KEY}"
+
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        dados = response.json()
+        if dados['status'] == 'success':
+            aqi = dados['data']['current']['pollution']['aqius']
+            avaliacao = avaliar_qualidade_ar(aqi)
+            return {
+                "cidade": cidade,
+                "estado": estado,
+                "aqi": aqi,
+                **avaliacao
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Erro ao obter AQI: {dados.get('data', {}).get('message', 'Erro desconhecido')}"
+            )
+    else:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail="Erro ao fazer a requisição para a API IQAir"
+        )
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
