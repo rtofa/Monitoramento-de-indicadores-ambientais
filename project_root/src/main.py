@@ -5,13 +5,19 @@ from typing import List, Optional
 import requests
 from fastapi import FastAPI, HTTPException
 import uvicorn
-
+from fastapi.middleware.cors import CORSMiddleware
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from database.database import init_db
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite todas as origens, mas é possível especificar apenas os domínios permitidos
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos HTTP (GET, POST, etc.)
+    allow_headers=["*"]   # Permite todos os cabeçalhos
+)
 
 init_db()
 
@@ -32,7 +38,7 @@ def avaliar_qualidade_ar(aqi: int):
     else:
         seguranca = "Perigoso"
         recomendacao = "Atividades ao ar livre devem ser evitadas."
-        
+
     return {"seguranca": seguranca, "recomendacao": recomendacao}
 
 @app.get("/obter-cidades-estado")
