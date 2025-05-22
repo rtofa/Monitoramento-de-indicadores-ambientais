@@ -8,7 +8,7 @@ import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from database.database import init_db
-
+from project_root.src.api import router as api_router
 
 app = FastAPI()
 app.add_middleware(
@@ -19,8 +19,13 @@ app.add_middleware(
     allow_headers=["*"]   # Permite todos os cabeçalhos
 )
 
+# Inicializa o banco de dados
 init_db()
 
+# Inclui o router da API
+app.include_router(api_router)
+
+# Mantém as rotas existentes para compatibilidade
 API_KEY = '02adefbf-c576-4cc7-bd0b-c310d359d731'
 BASE_URL = 'https://api.airvisual.com/v2'
 
